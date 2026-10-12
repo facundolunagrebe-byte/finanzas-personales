@@ -23,28 +23,95 @@ const num = (n, max = 8) => new Intl.NumberFormat('es-AR', { maximumFractionDigi
 const dinero = (n) => new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const fecha = (iso) => (iso ? iso.split('-').reverse().join('/') : '')
 
-// ---------- App ----------
-// Sin login por ahora: la app corre solo en esta compu. Antes de publicarla hay que
-// agregar acceso con passkey / Face ID y volver a cerrar las políticas de la tabla.
+// ---------- Sesión ----------
 
-function cargarApp() {
+let usuarioActual = null
+
+supabase.auth.onAuthStateChange((evento, session) => {
+  if (evento === 'TOKEN_REFRESHED') return
+  if (session) {
+    if (session.user.id === usuarioActual) return
+    usuarioActual = session.user.id
+    cargarApp(session)
+  } else {
+    usuarioActual = null
+    activos = []
+    editandoId = null
+    mostrarLogin()
+  }
+})
+
+function mostrarLogin() {
+  const passkeyOk = Boolean(window.PublicKeyCredential)
+  app.innerHTML = `
+    <div class="card auth">
+      <h1>Mis activos</h1>
+      <p style="color:var(--muted);font-size:.9rem">Entrá para ver y cargar tu portfolio.</p>
+      ${passkeyOk ? '<button class="primary" id="passkey-login" type="button">Entrar con Face ID / passkey</button>' : ''}
+      <form id="login-form">
+        <label>Email <input type="email" name="email" required autocomplete="username webauthn" /></label>
+        <label>Contraseña <input type="password" name="password" required autocomplete="current-password" /></label>
+        <button type="submit">Entrar con contraseña</button>
+      </form>
+      <p class="msg" id="login-msg"></p>
+    </div>`
+
+  const msg = document.getElementById('login-msg')
+  const error = (texto) => {
+    msg.className = 'msg error'
+    msg.textContent = texto
+  }
+
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const d = new FormData(e.target)
+    const { error: err } = await supabase.auth.signInWithPassword({
+      email: d.get('email'),
+      password: d.get('password'),
+    })
+    if (err) error('No se pudo entrar: ' + err.message)
+  })
+
+  document.getElementById('passkey-login')?.addEventListener('click', async () => {
+    const { error: err } = await supabase.auth.signInWithPasskey()
+    if (err) error('No se pudo entrar con passkey: ' + err.message)
+  })
+}
+
+// ---------- App ----------
+
+function cargarApp(session) {
+  const passkeyOk = Boolean(window.PublicKeyCredential)
   app.innerHTML = `
     <header class="top">
       <h1>Mis activos</h1>
+      <div class="who">
+        <span>${esc(session.user.email)}</span>
+        ${passkeyOk ? '<button id="registrar-passkey">Registrar passkey en este dispositivo</button>' : ''}
+        <button id="salir">Salir</button>
+      </div>
     </header>
+    <p class="msg" id="sesion-msg"></p>
     <section class="summary" id="resumen"></section>
     <section class="card" id="form-card"></section>
     <section class="card">
       <h2>Portfolio</h2>
       <div class="table-wrap" id="tabla"></div>
     </section>`
+
+  document.getElementById('salir').addEventListener('click', () => supabase.auth.signOut())
+  document.getElementById('registrar-passkey')?.addEventListener('click', async () => {
+    const msg = document.getElementById('sesion-msg')
+    const { error } = await supabase.auth.registerPasskey()
+    msg.className = error ? 'msg error' : 'msg ok'
+    msg.textContent = error
+      ? 'No se pudo registrar la passkey: ' + error.message
+      : 'Passkey registrada. La próxima vez podés entrar con Face ID o la clave de este dispositivo.'
+  })
+
   renderForm()
   return recargar()
 }
-
-cargarApp()
-
-
 async function recargar() {
   const { data, error } = await supabase
     .from('activos')

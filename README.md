@@ -11,5 +11,7 @@ Mini app para registrar mis activos (acciones, CEDEARs, bonos, FCI, cripto, efec
 ## Seguridad
 
 - Solo se usa la publishable key; nunca la `service_role`.
-- **Versión actual: sin login y con la tabla abierta.** Es solo para uso local. No publicar la app hasta agregar acceso con passkey / Face ID y cerrar la política `activos_abierto_temporal`.
+- Login con email y contraseña, y passkey / Face ID (beta de Supabase). RLS: cada usuario solo ve y modifica sus propias filas; sin login no se accede a nada.
+- Desactivar "Allow new users to sign up" en Supabase (Authentication > Sign In / Providers): la app es de un solo usuario.
+- El Relying Party ID de la passkey debe ser el dominio definitivo de la app: cambiarlo invalida las passkeys ya registradas.
 - `.env` está en `.gitignore`.
