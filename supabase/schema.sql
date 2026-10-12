@@ -1,8 +1,8 @@
--- Tabla de activos. Pegar en Supabase > SQL Editor > Run.
+-- Tabla de activos (versión sin login, solo para uso local).
+-- Pegar en Supabase > SQL Editor > Run. Se puede correr más de una vez sin problema.
 
 create table if not exists public.activos (
   id            uuid primary key default gen_random_uuid(),
-  user_id       uuid not null default auth.uid() references auth.users (id) on delete cascade,
   ticker        text not null,
   tipo          text not null check (tipo in ('accion', 'cedear', 'bono', 'fci', 'cripto', 'efectivo', 'otro')),
   cantidad      numeric not null check (cantidad >= 0),
@@ -14,24 +14,21 @@ create table if not exists public.activos (
   creado_en     timestamptz not null default now()
 );
 
-create index if not exists activos_user_id_idx on public.activos (user_id);
-
--- Seguridad: cada usuario solo ve y modifica sus propias filas.
 alter table public.activos enable row level security;
 
+-- Limpia las políticas de la versión con login.
 drop policy if exists "activos_select_propios" on public.activos;
 drop policy if exists "activos_insert_propios" on public.activos;
 drop policy if exists "activos_update_propios" on public.activos;
 drop policy if exists "activos_delete_propios" on public.activos;
+drop policy if exists "activos_abierto_temporal" on public.activos;
 
-create policy "activos_select_propios" on public.activos
-  for select to authenticated using (user_id = auth.uid());
+-- La columna user_id ya no se usa sin login.
+drop index if exists public.activos_user_id_idx;
+alter table public.activos drop column if exists user_id;
 
-create policy "activos_insert_propios" on public.activos
-  for insert to authenticated with check (user_id = auth.uid());
-
-create policy "activos_update_propios" on public.activos
-  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
-
-create policy "activos_delete_propios" on public.activos
-  for delete to authenticated using (user_id = auth.uid());
+-- ATENCIÓN: política abierta TEMPORAL. Con ella, cualquiera que tenga la URL y la
+-- publishable key puede leer y escribir la tabla. Es aceptable mientras la app
+-- corre solo en local. Antes de publicarla hay que cerrarla (acceso con passkey).
+create policy "activos_abierto_temporal" on public.activos
+  for all to anon, authenticated using (true) with check (true);

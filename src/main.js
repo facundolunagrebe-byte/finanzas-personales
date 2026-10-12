@@ -1,4 +1,4 @@
-import './style.css'
+﻿import './style.css'
 import { supabase } from './supabase.js'
 
 const TIPOS = {
@@ -23,63 +23,14 @@ const num = (n, max = 8) => new Intl.NumberFormat('es-AR', { maximumFractionDigi
 const dinero = (n) => new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const fecha = (iso) => (iso ? iso.split('-').reverse().join('/') : '')
 
-// ---------- Sesión ----------
-
-supabase.auth.onAuthStateChange((_evento, session) => {
-  if (session) cargarApp(session)
-  else mostrarLogin()
-})
-
-function mostrarLogin(mensaje = '', clase = 'error') {
-  app.innerHTML = `
-    <div class="card auth">
-      <h1>Mis activos</h1>
-      <p style="color:var(--muted);font-size:.9rem">Entrá para ver y cargar tu portfolio.</p>
-      <form id="login-form">
-        <label>Email <input type="email" name="email" required autocomplete="email" /></label>
-        <label>Contraseña <input type="password" name="password" required minlength="8" autocomplete="current-password" /></label>
-        <button class="primary" type="submit" data-accion="entrar">Entrar</button>
-        <button class="link" type="button" id="crear-cuenta">Crear cuenta (solo la primera vez)</button>
-      </form>
-      <p class="msg ${clase}" id="login-msg">${esc(mensaje)}</p>
-    </div>`
-
-  const form = document.getElementById('login-form')
-  const msg = document.getElementById('login-msg')
-  const credenciales = () => {
-    const d = new FormData(form)
-    return { email: d.get('email'), password: d.get('password') }
-  }
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault()
-    const { error } = await supabase.auth.signInWithPassword(credenciales())
-    if (error) {
-      msg.className = 'msg error'
-      msg.textContent = 'No se pudo entrar: ' + error.message
-    }
-  })
-
-  document.getElementById('crear-cuenta').addEventListener('click', async () => {
-    if (!form.reportValidity()) return
-    const { data, error } = await supabase.auth.signUp(credenciales())
-    if (error) {
-      msg.className = 'msg error'
-      msg.textContent = 'No se pudo crear la cuenta: ' + error.message
-    } else if (!data.session) {
-      msg.className = 'msg ok'
-      msg.textContent = 'Cuenta creada. Revisá tu mail para confirmarla y después entrá.'
-    }
-  })
-}
-
 // ---------- App ----------
+// Sin login por ahora: la app corre solo en esta compu. Antes de publicarla hay que
+// agregar acceso con passkey / Face ID y volver a cerrar las políticas de la tabla.
 
-async function cargarApp(session) {
+function cargarApp() {
   app.innerHTML = `
     <header class="top">
       <h1>Mis activos</h1>
-      <div class="who"><span>${esc(session.user.email)}</span><button id="salir">Salir</button></div>
     </header>
     <section class="summary" id="resumen"></section>
     <section class="card" id="form-card"></section>
@@ -87,10 +38,12 @@ async function cargarApp(session) {
       <h2>Portfolio</h2>
       <div class="table-wrap" id="tabla"></div>
     </section>`
-  document.getElementById('salir').addEventListener('click', () => supabase.auth.signOut())
   renderForm()
-  await recargar()
+  return recargar()
 }
+
+cargarApp()
+
 
 async function recargar() {
   const { data, error } = await supabase

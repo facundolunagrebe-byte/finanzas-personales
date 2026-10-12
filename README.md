@@ -1,4 +1,4 @@
-# Mis activos
+﻿# Mis activos
 
 Mini app para registrar mis activos (acciones, CEDEARs, bonos, FCI, cripto, efectivo). Vite + Supabase.
 
@@ -11,5 +11,5 @@ Mini app para registrar mis activos (acciones, CEDEARs, bonos, FCI, cripto, efec
 ## Seguridad
 
 - Solo se usa la publishable key; nunca la `service_role`.
-- RLS: cada usuario solo ve y modifica sus propias filas.
+- **Versión actual: sin login y con la tabla abierta.** Es solo para uso local. No publicar la app hasta agregar acceso con passkey / Face ID y cerrar la política `activos_abierto_temporal`.
 - `.env` está en `.gitignore`.
