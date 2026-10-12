@@ -66,14 +66,14 @@ function renderResumen() {
     const m = (porMoneda[a.moneda] ??= { invertido: 0, conPrecio: 0, total: 0 })
     m.total++
     if (a.precio_compra != null) {
-      m.invertido += Number(a.cantidad) * Number(a.precio_compra)
+      m.invertido += Number(a.cantidad) * Number(a.precio_compra) + Number(a.comision ?? 0)
       m.conPrecio++
     }
   }
   const tarjetas = Object.entries(porMoneda).map(
     ([moneda, m]) => `
       <div class="card">
-        <div class="label">Invertido en ${esc(moneda)}</div>
+        <div class="label">Invertido en ${esc(moneda)} (con comisión)</div>
         <div class="value">${dinero(m.invertido)}</div>
         <div class="sub">${m.conPrecio} de ${m.total} activos con precio de compra</div>
       </div>`,
@@ -94,7 +94,7 @@ function renderTabla() {
     <table>
       <thead><tr>
         <th>Ticker</th><th>Tipo</th><th class="num">Cantidad</th><th>Moneda</th>
-        <th class="num">Precio compra</th><th>Fecha</th><th>Broker</th><th>Notas</th><th></th>
+        <th class="num">Precio compra</th><th class="num">Comisión</th><th>Fecha</th><th>Broker</th><th>Notas</th><th></th>
       </tr></thead>
       <tbody>
         ${activos
@@ -106,6 +106,7 @@ function renderTabla() {
             <td class="num">${num(a.cantidad)}</td>
             <td>${esc(a.moneda)}</td>
             <td class="num">${a.precio_compra != null ? dinero(a.precio_compra) : '—'}</td>
+            <td class="num">${Number(a.comision) ? dinero(a.comision) : '—'}</td>
             <td>${esc(fecha(a.fecha_compra)) || '—'}</td>
             <td>${esc(a.broker) || '—'}</td>
             <td class="notes">${esc(a.notas)}</td>
@@ -159,6 +160,8 @@ function renderForm() {
         </select></label>
       <label>Precio de compra (por unidad, opcional)
         <input name="precio_compra" type="number" step="any" min="0" value="${esc(a.precio_compra)}" /></label>
+      <label>Comisión (en la misma moneda, opcional)
+        <input name="comision" type="number" step="any" min="0" value="${esc(a.comision || '')}" /></label>
       <label>Fecha de compra (opcional)
         <input name="fecha_compra" type="date" value="${esc(a.fecha_compra)}" /></label>
       <label>Broker / plataforma (opcional)
@@ -187,6 +190,7 @@ function renderForm() {
       cantidad: Number(d.get('cantidad')),
       moneda: d.get('moneda'),
       precio_compra: d.get('precio_compra') === '' ? null : Number(d.get('precio_compra')),
+      comision: d.get('comision') === '' ? 0 : Number(d.get('comision')),
       fecha_compra: d.get('fecha_compra') || null,
       broker: texto('broker'),
       notas: texto('notas'),

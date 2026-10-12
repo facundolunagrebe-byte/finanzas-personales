@@ -1,4 +1,4 @@
--- Tabla de activos (versión sin login, solo para uso local).
+﻿-- Tabla de activos (versión sin login, solo para uso local).
 -- Pegar en Supabase > SQL Editor > Run. Se puede correr más de una vez sin problema.
 
 create table if not exists public.activos (
@@ -8,11 +8,15 @@ create table if not exists public.activos (
   cantidad      numeric not null check (cantidad >= 0),
   moneda        text not null check (moneda in ('ARS', 'USD', 'USDT', 'EUR', 'otra')),
   precio_compra numeric check (precio_compra >= 0),
+  comision      numeric not null default 0 check (comision >= 0),
   fecha_compra  date,
   broker        text,
   notas         text,
   creado_en     timestamptz not null default now()
 );
+
+-- Para tablas creadas antes de que existiera la comisión.
+alter table public.activos add column if not exists comision numeric not null default 0 check (comision >= 0);
 
 alter table public.activos enable row level security;
 
